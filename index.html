@@ -563,7 +563,7 @@ function collectAndSubmitRound(){
       qState.reveals.forEach(rv=>{
         const pts = rv.outcome === "success" ? 25 : -25;
         deltas[rv.player]+=pts;
-        detailLines.push(`${state.players[rv.player]} (Queen reveal bet): ${rv.outcome==="success"?"succeeded":"failed"} = ${pts>0?"+":""}${pts}`);
+        detailLines.push(`${state.players[rv.player]} (Queen reveal bet): ${rv.outcome==="success"?"succeeded"} = ${pts>0?"+":""}${pts}`);
       });
       gamesUsed.push(def.label);
 
