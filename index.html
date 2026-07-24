@@ -363,16 +363,24 @@ function renderEntryPanels(){
 
     } else if(def.kind === "count"){
       const challengeHtml = def.challenge ? `
-        <div class="subhint" style="margin-top:12px;">Challenge: one player collected ALL the ${def.label} cards this round.</div>
-        <label class="radio-row"><input type="checkbox" id="challenge-active-${key}"><span>Challenge happened (+${def.challenge.win} to winner, ${def.challenge.lose} to each other kingdom)</span></label>
-        <div class="radio-list" id="challenge-player-${key}" style="display:none;"></div>
+        <div class="subhint" style="margin-top:12px;">Challenge: a player attempts to collect ALL the ${def.label} cards.</div>
+        <label class="radio-row"><input type="checkbox" id="challenge-active-${key}"><span>Challenge attempted this round</span></label>
+        <div id="challenge-details-${key}" style="display:none;">
+          <div class="subhint">Who attempted it:</div>
+          <div class="radio-list" id="challenge-player-${key}"></div>
+          <div class="subhint" style="margin-top:8px;">Outcome:</div>
+          <div class="radio-list">
+            <label class="radio-row"><input type="radio" name="challenge-outcome-${key}" value="win" checked><span>Succeeded (+${def.challenge.win} to them, ${def.challenge.lose} to the other 3)</span></label>
+            <label class="radio-row"><input type="radio" name="challenge-outcome-${key}" value="lose"><span>Failed - didn't collect all (${def.challenge.lose} to them only)</span></label>
+          </div>
+        </div>
       ` : "";
       panel.innerHTML = `<h3>${def.label}</h3><div class="subhint">Cards collected (0-${def.max}), ${def.perCard} pts each.</div><div id="rows-${key}"></div>${challengeHtml}`;
       el.appendChild(panel);
       const rows = panel.querySelector(`#rows-${key}`);
       window._roundState[key] = {
         counts: state.players.map(()=>({val:0})),
-        challenge: { active:false, player:0 }
+        challenge: { active:false, player:0, outcome:"win" }
       };
       state.players.forEach((name,i)=>{
         const row = document.createElement("div");
@@ -384,6 +392,7 @@ function renderEntryPanels(){
 
       if(def.challenge){
         const cb = panel.querySelector(`#challenge-active-${key}`);
+        const details = panel.querySelector(`#challenge-details-${key}`);
         const playerWrap = panel.querySelector(`#challenge-player-${key}`);
         state.players.forEach((name,i)=>{
           const row = document.createElement("label");
@@ -393,7 +402,7 @@ function renderEntryPanels(){
         });
         cb.addEventListener("change", ()=>{
           window._roundState[key].challenge.active = cb.checked;
-          playerWrap.style.display = cb.checked ? "block" : "none";
+          details.style.display = cb.checked ? "block" : "none";
           rows.querySelectorAll("button").forEach(b=> b.disabled = cb.checked);
         });
         playerWrap.querySelectorAll(`input[name="challenge-who-${key}"]`).forEach(r=>{
@@ -401,11 +410,16 @@ function renderEntryPanels(){
             window._roundState[key].challenge.player = parseInt(e.target.value,10);
           });
         });
+        panel.querySelectorAll(`input[name="challenge-outcome-${key}"]`).forEach(r=>{
+          r.addEventListener("change", e=>{
+            window._roundState[key].challenge.outcome = e.target.value;
+          });
+        });
       }
 
     } else if(def.kind === "queens"){
       panel.innerHTML = `<h3>Queens</h3><div class="subhint">Normal queen = -25. Doubled queen = -50.</div><div id="rows-${key}"></div>
-        <div class="subhint" style="margin-top:12px;">Reveal bets: a player reveals a queen, betting someone else collects it. Success = +25 for the revealer, fail = -25.</div>
+        <div class="subhint" style="margin-top:12px;">Reveal bets: a player reveals a queen, betting someone else collects it. If a queen is revealed and successfully passed on, the revealer gains +25.</div>
         <div id="reveals-${key}"></div>
         <button type="button" class="chip" id="addReveal-${key}" style="margin-top:6px;">+ Add reveal bet</button>`;
       el.appendChild(panel);
@@ -429,7 +443,7 @@ function renderEntryPanels(){
 
       const revealsEl = panel.querySelector(`#reveals-${key}`);
       function addRevealRow(){
-        const revealObj = { player: 0, outcome: "success" };
+        const revealObj = { player: 0 };
         window._roundState[key].reveals.push(revealObj);
         const row = document.createElement("div");
         row.className = "player-row";
@@ -440,9 +454,10 @@ function renderEntryPanels(){
           playerSel.appendChild(opt);
         });
         playerSel.addEventListener("change", e=>{ revealObj.player = parseInt(e.target.value,10); });
-        const outcomeSel = document.createElement("select");
-        outcomeSel.innerHTML = `<option value="success">Succeeded (+25)</option>`;
-        outcomeSel.addEventListener("change", e=>{ revealObj.outcome = e.target.value; });
+        const label = document.createElement("span");
+        label.textContent = "+25";
+        label.style.color = "var(--success)";
+        label.style.fontSize = "13px";
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
         removeBtn.textContent = "Remove";
@@ -453,7 +468,7 @@ function renderEntryPanels(){
           row.remove();
         });
         row.appendChild(playerSel);
-        row.appendChild(outcomeSel);
+        row.appendChild(label);
         row.appendChild(removeBtn);
         revealsEl.appendChild(row);
       }
@@ -526,16 +541,21 @@ function collectAndSubmitRound(){
     } else if(def.kind === "count"){
       const cState = window._roundState[key];
       if(cState.challenge && cState.challenge.active){
-        const winner = cState.challenge.player;
-        state.players.forEach((name,i)=>{
-          if(i===winner){
-            deltas[i]+=def.challenge.win;
-            detailLines.push(`${state.players[i]} (${def.label} challenge): collected all = +${def.challenge.win}`);
-          } else {
-            deltas[i]+=def.challenge.lose;
-            detailLines.push(`${state.players[i]} (${def.label} challenge): ${def.challenge.lose}`);
-          }
-        });
+        const challenger = cState.challenge.player;
+        if(cState.challenge.outcome === "win"){
+          state.players.forEach((name,i)=>{
+            if(i===challenger){
+              deltas[i]+=def.challenge.win;
+              detailLines.push(`${state.players[i]} (${def.label} challenge): succeeded = +${def.challenge.win}`);
+            } else {
+              deltas[i]+=def.challenge.lose;
+              detailLines.push(`${state.players[i]} (${def.label} challenge): ${def.challenge.lose}`);
+            }
+          });
+        } else {
+          deltas[challenger]+=def.challenge.lose;
+          detailLines.push(`${state.players[challenger]} (${def.label} challenge): failed = ${def.challenge.lose}`);
+        }
       } else {
         cState.counts.forEach((c,i)=>{
           if(c.val>0){
@@ -561,9 +581,8 @@ function collectAndSubmitRound(){
         }
       });
       qState.reveals.forEach(rv=>{
-        const pts = rv.outcome === "success" ? 25 : -25;
-        deltas[rv.player]+=pts;
-        detailLines.push(`${state.players[rv.player]} (Queen reveal bet): ${rv.outcome==="success"?"succeeded"} = ${pts>0?"+":""}${pts}`);
+        deltas[rv.player]+=25;
+        detailLines.push(`${state.players[rv.player]} (Queen reveal bet): +25`);
       });
       gamesUsed.push(def.label);
 
