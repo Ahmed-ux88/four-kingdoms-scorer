@@ -1,4 +1,4 @@
-const CACHE_NAME = "four-kingdoms-scorer-v3";
+const CACHE_NAME = "four-kingdoms-scorer-v4";
 const ASSETS = [
   "./",
   "./index.html",
