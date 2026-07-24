@@ -187,7 +187,7 @@ const STORAGE_KEY = "fourKingdomsScorerState_v2";
 
 const GAME_DEFS = {
   jacks:   { label:"Jacks",       kind:"rank" },
-  karo:    { label:"Karo",        kind:"count", perCard:-10, max:12, challenge:{win:75, lose:-75} },
+  karo:    { label:"Karo",        kind:"count", perCard:-10, max:12, challenge:{win:65, lose:-65} },
   sons:    { label:"Sons",        kind:"count", perCard:-15, max:13 },
   queens:  { label:"Queens",      kind:"queens" },
   kingheart:{ label:"King Heart", kind:"single", penalty:-150 }
@@ -441,7 +441,7 @@ function renderEntryPanels(){
         });
         playerSel.addEventListener("change", e=>{ revealObj.player = parseInt(e.target.value,10); });
         const outcomeSel = document.createElement("select");
-        outcomeSel.innerHTML = `<option value="success">Succeeded (+25)</option><option value="fail">Failed (-25)</option>`;
+        outcomeSel.innerHTML = `<option value="success">Succeeded (+25)</option>`;
         outcomeSel.addEventListener("change", e=>{ revealObj.outcome = e.target.value; });
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
